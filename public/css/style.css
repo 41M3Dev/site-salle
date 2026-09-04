@@ -1,0 +1,270 @@
+:root {
+  /* Couleurs extraites directement du CSS/DOM de needfor-school.com */
+  --n3ed-dark: #222222;      /* fond du footer */
+  --n3ed-white: #ffffff;     /* texte clair, fonds de carte */
+  --n3ed-purple: #b452ff;    /* extrémité violette du dégradé (section contact) */
+  --n3ed-pink: #eb1f66;      /* rose/magenta (liens, titres, boutons, icônes sociales) */
+  --n3ed-orange: #ff7f59;    /* fond des boutons CTA ("Découvre nos formations", etc.) */
+
+  /* Alias sémantiques, à utiliser dans le reste du CSS */
+  --color-background: var(--n3ed-dark);
+  --color-text-light: var(--n3ed-white);
+  --color-accent-primary: var(--n3ed-pink);
+  --color-accent-secondary: var(--n3ed-purple);
+  --color-accent-tertiary: var(--n3ed-orange);
+
+  /* Dégradés utilisés sur le site (hero, sections, formulaire de contact) */
+  --n3ed-gradient-hero: linear-gradient(172deg, #e94884 0%, #ff7f59 100%);
+  --n3ed-gradient-alt: linear-gradient(75deg, #ffbf86 0%, #ff5675 100%);
+  --n3ed-gradient-contact: linear-gradient(135deg, #ff5675 0%, #b452ff 100%);
+
+  /* Mapping vers les rôles utilisés dans le reste de la feuille de style :
+     fond de page sombre, cartes claires (comme les blocs de contenu du site). */
+  --bg: var(--color-background);
+  --text-on-dark: var(--color-text-light);
+  --muted-on-dark: rgba(255, 255, 255, 0.62);
+
+  --card: var(--color-text-light);
+  --card-border: #e7e7ea;
+  --text: #201f28;
+  --muted: #6b7280;
+  --field-bg: #f5f5f7;
+  --border: #e7e7ea;
+
+  --primary: var(--color-accent-primary);
+  --cta: var(--color-accent-tertiary);
+  --danger: #e5484d;
+  --success: #16a34a;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text-on-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+header.app-header {
+  text-align: center;
+  padding: 28px 16px 12px;
+}
+
+header.app-header h1 {
+  font-size: 1.4rem;
+  margin: 0 0 4px;
+  background: var(--n3ed-gradient-hero);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+header.app-header p {
+  color: var(--muted-on-dark);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.card {
+  background: var(--card);
+  color: var(--text);
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+select, input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+select:focus, input:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+}
+
+button {
+  font-size: 0.95rem;
+  padding: 11px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--cta);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button:hover { background: var(--n3ed-gradient-alt); }
+
+button.secondary {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+button.secondary:hover { background: rgba(128, 128, 128, 0.12); opacity: 1; }
+
+button.danger { background: var(--danger); }
+button.danger:hover { background: #c93a3f; }
+
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.result {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.result .salle-nom {
+  font-size: 2rem;
+  font-weight: 700;
+  background: var(--n3ed-gradient-hero);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 8px 0;
+}
+
+.result .hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th, td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+
+th { color: var(--muted); font-weight: 600; }
+
+tr.today { background: rgba(255, 127, 89, 0.15); }
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.row > * { flex: 1; }
+
+.row.tight > * { flex: initial; }
+
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+.error-msg {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin-top: 8px;
+}
+
+.success-msg {
+  color: var(--success);
+  font-size: 0.88rem;
+  margin-top: 8px;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.list-item:last-child { border-bottom: none; }
+
+.list-item .info { flex: 1; min-width: 0; }
+.list-item .info .name { font-weight: 600; }
+.list-item .actions { display: flex; gap: 6px; flex-shrink: 0; }
+.list-item .actions button { padding: 8px 10px; font-size: 0.85rem; }
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-accent-secondary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.tabs button {
+  background: none;
+  color: var(--muted-on-dark);
+  border-radius: 0;
+  padding: 10px 14px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+
+.tabs button.active {
+  color: var(--color-accent-tertiary);
+  border-bottom-color: var(--color-accent-tertiary);
+}
+
+.tabs button:hover { background: none; color: var(--color-accent-tertiary); }
+
+[hidden] { display: none !important; }
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.top-bar h2 { margin: 0; font-size: 1.1rem; }
+
+form.inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 600px) {
+  form.inline-form.horizontal {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+}

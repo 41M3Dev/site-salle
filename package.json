@@ -1,0 +1,19 @@
+{
+  "name": "ou-est-ma-salle",
+  "version": "1.0.0",
+  "description": "Petite appli pour retrouver la salle de sa classe (alternance)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "init-data": "node src/init-data.js"
+  },
+  "dependencies": {
+    "cookie-session": "^2.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Où est ma salle ?</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="login-view" class="container" style="max-width: 380px; padding-top: 60px;">
+    <div class="card">
+      <h2 style="margin-top:0;">Connexion admin</h2>
+      <form id="login-form" class="inline-form">
+        <div>
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit">Se connecter</button>
+        <p class="error-msg" id="login-error" hidden></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="admin-view" hidden>
+    <div class="top-bar">
+      <h2>⚙️ Administration</h2>
+      <button class="secondary" id="logout-btn">Déconnexion</button>
+    </div>
+
+    <main class="container">
+      <div class="tabs">
+        <button data-tab="attributions" class="active">Attributions</button>
+        <button data-tab="classes">Classes</button>
+      </div>
+
+      <!-- Classes : liste en lecture seule, dérivée du planning de l'école -->
+      <section id="tab-classes" hidden>
+        <div class="card">
+          <h3 style="margin-top:0;">Classes (planning de l'école)</h3>
+          <p class="muted">Salles disponibles : A, B, D, E, Studio. La liste des classes vient de <code>planning-ecole.json</code>.</p>
+          <div id="classes-list"><p class="muted">Chargement...</p></div>
+        </div>
+      </section>
+
+      <!-- Attributions -->
+      <section id="tab-attributions">
+        <div class="card">
+          <label for="attrib-classe-select">Classe</label>
+          <select id="attrib-classe-select">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div id="attrib-detail" hidden>
+          <div class="card">
+            <h3 style="margin-top:0;">Attribuer une salle</h3>
+            <p class="muted">Choisis "Toute la semaine" pour la salle par défaut, ou un jour précis pour une surcharge ponctuelle ce jour-là.</p>
+            <form id="attrib-form" class="inline-form horizontal">
+              <div>
+                <label for="attrib-jour-select">Jour</label>
+                <select id="attrib-jour-select"></select>
+              </div>
+              <div style="flex:2;">
+                <label for="attrib-salle-select">Salle</label>
+                <select id="attrib-salle-select"></select>
+              </div>
+              <button type="submit">Enregistrer</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-top:0;">Attributions actuelles</h3>
+            <div id="attrib-list" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
