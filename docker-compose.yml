@@ -11,6 +11,12 @@ services:
       DATA_PATH: /app/data/data.json
     volumes:
       - salle_data:/app/data
+    networks:
+      - dokploy-network
 
 volumes:
   salle_data:
+
+networks:
+  dokploy-network:
+    external: true
