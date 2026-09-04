@@ -35,6 +35,19 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateFR(iso) {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 function showLogin() {
   document.getElementById('login-view').hidden = false;
   document.getElementById('admin-view').hidden = true;
@@ -129,8 +142,16 @@ function renderClasses() {
       <div class="info">
         <div class="name">${escapeHtml(c.nom)}</div>
         <div class="muted">
-          ${c.salleParDefaut ? `Défaut : ${escapeHtml(c.salleParDefaut)}` : 'Pas de salle par défaut'}
-          ${c.nbSurcharges ? ` · <span class="badge">${c.nbSurcharges} surcharge(s)</span>` : ''}
+          Salle actuelle : ${c.salleParDefaut ? escapeHtml(c.salleParDefaut) : 'aucune'}
+          ${c.nbSurchargesActives ? ` · <span class="badge">${c.nbSurchargesActives} surcharge(s) active(s)</span>` : ''}
+          ${c.changementProgramme ? `
+            <br />
+            <span class="badge" style="background: var(--cta);">
+              Changement prévu le ${formatDateFR(c.changementProgramme.dateDebut)}
+              ${c.changementProgramme.jourSemaine ? `(${JOURS_LABELS[c.changementProgramme.jourSemaine]})` : '(toute la semaine)'}
+              vers ${escapeHtml(c.changementProgramme.salle)}
+            </span>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -143,6 +164,7 @@ const attribClasseSelect = document.getElementById('attrib-classe-select');
 const attribDetail = document.getElementById('attrib-detail');
 const attribJourSelect = document.getElementById('attrib-jour-select');
 const attribSalleSelect = document.getElementById('attrib-salle-select');
+const attribDateInput = document.getElementById('attrib-date-input');
 
 async function loadAttribClasseOptions() {
   const current = attribClasseSelect.value;
@@ -160,6 +182,8 @@ async function loadAttribSalleOptions() {
   attribSalleSelect.innerHTML = options || '<option value="">Aucune salle</option>';
   attribJourSelect.innerHTML = '<option value="">Toute la semaine</option>' +
     Object.entries(JOURS_LABELS).map(([val, label]) => `<option value="${val}">${label}</option>`).join('');
+  attribDateInput.value = todayISO();
+  attribDateInput.min = todayISO();
 }
 
 attribClasseSelect.addEventListener('change', loadAttribDetail);
@@ -173,10 +197,11 @@ async function loadAttribDetail() {
   attribDetail.hidden = false;
 
   const data = await api(`/api/admin/classes/${encodeURIComponent(classeId)}/attributions`);
-  renderAttribList(data.defaut, data.surcharges);
+  renderAttribList(data.defaut, data.parJour);
+  renderAttribPlanifiees(data.planifiees);
 }
 
-function renderAttribList(defaut, surcharges) {
+function renderAttribList(defaut, parJour) {
   const container = document.getElementById('attrib-list');
   const rows = [];
 
@@ -186,25 +211,49 @@ function renderAttribList(defaut, surcharges) {
         <span class="badge">Toute la semaine</span>
         <span style="margin-left:8px;">${defaut ? escapeHtml(defaut.salle) : '<span class="muted">Aucune salle par défaut</span>'}</span>
       </div>
-      ${defaut ? `<div class="actions"><button class="danger" onclick="deleteAttribution('')">Retirer</button></div>` : ''}
+      ${defaut ? `<div class="actions"><button class="danger" onclick="deleteAttribution(${defaut.id})">Retirer</button></div>` : ''}
     </div>
   `);
 
-  (surcharges || []).forEach((s) => {
+  (parJour || []).filter((j) => j.estSurcharge).forEach((j) => {
     rows.push(`
       <div class="list-item">
         <div class="info">
-          <span class="badge">${JOURS_LABELS[s.jour]}</span>
-          <span style="margin-left:8px;">${escapeHtml(s.salle)}</span>
+          <span class="badge">${JOURS_LABELS[j.jour]}</span>
+          <span style="margin-left:8px;">${escapeHtml(j.salle)}</span>
         </div>
         <div class="actions">
-          <button class="danger" onclick="deleteAttribution('${s.jour}')">Retirer</button>
+          <button class="danger" onclick="deleteAttribution(${j.id})">Retirer</button>
         </div>
       </div>
     `);
   });
 
   container.innerHTML = rows.join('');
+}
+
+function renderAttribPlanifiees(planifiees) {
+  const card = document.getElementById('attrib-planifiees-card');
+  const container = document.getElementById('attrib-planifiees-list');
+
+  if (!planifiees || planifiees.length === 0) {
+    card.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+
+  card.hidden = false;
+  container.innerHTML = planifiees.map((p) => `
+    <div class="list-item">
+      <div class="info">
+        <span class="badge">${p.jourSemaine ? JOURS_LABELS[p.jourSemaine] : 'Toute la semaine'}</span>
+        <span style="margin-left:8px;">${escapeHtml(p.salle)} — à partir du ${formatDateFR(p.dateDebut)}</span>
+      </div>
+      <div class="actions">
+        <button class="danger" onclick="deleteAttribution(${p.id})">Annuler</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 document.getElementById('attrib-form').addEventListener('submit', async (e) => {
@@ -216,16 +265,15 @@ document.getElementById('attrib-form').addEventListener('submit', async (e) => {
     body: JSON.stringify({
       salle_id: attribSalleSelect.value,
       jour_semaine: attribJourSelect.value || null,
+      date_debut: attribDateInput.value || todayISO(),
     }),
   });
   await loadAttribDetail();
   await loadClasses();
 });
 
-window.deleteAttribution = async (jour) => {
-  const classeId = attribClasseSelect.value;
-  if (!classeId) return;
-  await api(`/api/admin/classes/${encodeURIComponent(classeId)}/attribution?jour=${jour}`, { method: 'DELETE' });
+window.deleteAttribution = async (attribId) => {
+  await api(`/api/admin/attributions/${attribId}`, { method: 'DELETE' });
   await loadAttribDetail();
   await loadClasses();
 };

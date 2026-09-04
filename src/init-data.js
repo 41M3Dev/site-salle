@@ -22,10 +22,13 @@ async function seed() {
     return;
   }
 
-  await store.insert('attributions', { classeId: formation1, salleId: 'A', jourSemaine: null });
+  const { todayISO } = require('./resolveSalle');
+  const dateDebut = todayISO();
+
+  await store.insert('attributions', { classeId: formation1, salleId: 'A', jourSemaine: null, dateDebut });
   if (formation2) {
-    await store.insert('attributions', { classeId: formation2, salleId: 'B', jourSemaine: null });
-    await store.insert('attributions', { classeId: formation2, salleId: 'Studio', jourSemaine: 'mardi' });
+    await store.insert('attributions', { classeId: formation2, salleId: 'B', jourSemaine: null, dateDebut });
+    await store.insert('attributions', { classeId: formation2, salleId: 'Studio', jourSemaine: 'mardi', dateDebut });
   }
 
   console.log('data.json initialisé avec des attributions de démonstration.');

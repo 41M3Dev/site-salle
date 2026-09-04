@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const store = require('../dataStore');
-const { JOURS } = require('../jours');
 const { SALLES } = require('../salles');
 const { getFormations, getFormationsAvecCoursAujourdhui } = require('../planning');
+const { resolveSallePourSemaine } = require('../resolveSalle');
 
 // Liste des classes pour la page publique (sélection) : uniquement les
 // formations qui ont cours aujourd'hui, selon public/planning-ecole.json.
@@ -12,42 +11,34 @@ router.get('/classes', (req, res) => {
   res.json(classes);
 });
 
-// Salle(s) d'une classe : détail par jour si des surcharges existent,
-// sinon une salle unique valable toute la semaine.
+// Salle(s) d'une classe, telle qu'actuellement en vigueur (jamais une
+// attribution programmée pour le futur) : détail par jour si la salle
+// change selon le jour, sinon une salle unique valable toute la semaine.
 router.get('/classes/:id/salle', async (req, res) => {
   const classeId = req.params.id;
   if (!getFormations().includes(classeId)) {
     return res.status(404).json({ error: 'Classe introuvable' });
   }
 
-  const attributions = await store.findAll('attributions');
   const salleById = new Map(SALLES.map((s) => [s.id, s]));
+  const semaine = await resolveSallePourSemaine(classeId);
+  const salleNom = (attribution) => (attribution ? salleById.get(attribution.salleId)?.nom || null : null);
 
-  const classeAttributions = attributions
-    .filter((a) => a.classeId === classeId)
-    .map((a) => ({ jour: a.jourSemaine, salle: salleById.get(a.salleId)?.nom || null }));
+  const salleIds = semaine.map((j) => j.attribution?.salleId || null);
+  const uniforme = salleIds.every((id) => id === salleIds[0]);
 
-  const defaut = classeAttributions.find((a) => a.jour === null) || null;
-  const surcharges = classeAttributions.filter((a) => a.jour !== null);
-
-  if (surcharges.length === 0) {
+  if (uniforme) {
     return res.json({
       classe: classeId,
       uniforme: true,
-      salle: defaut ? defaut.salle : null,
+      salle: salleNom(semaine[0].attribution),
     });
   }
-
-  const parJour = JOURS.map((jour) => {
-    const surcharge = surcharges.find((s) => s.jour === jour);
-    const salle = surcharge ? surcharge.salle : (defaut ? defaut.salle : null);
-    return { jour, salle };
-  });
 
   res.json({
     classe: classeId,
     uniforme: false,
-    parJour,
+    parJour: semaine.map((j) => ({ jour: j.jour, salle: salleNom(j.attribution) })),
   });
 });
 

@@ -53,8 +53,8 @@
 
         <div id="attrib-detail" hidden>
           <div class="card">
-            <h3 style="margin-top:0;">Attribuer une salle</h3>
-            <p class="muted">Choisis "Toute la semaine" pour la salle par défaut, ou un jour précis pour une surcharge ponctuelle ce jour-là.</p>
+            <h3 style="margin-top:0;">Programmer une salle</h3>
+            <p class="muted">Choisis "Toute la semaine" pour la salle par défaut, ou un jour précis pour une surcharge ponctuelle ce jour-là. La date d'entrée en vigueur permet de préparer un changement à l'avance sans affecter l'affichage avant cette date.</p>
             <form id="attrib-form" class="inline-form horizontal">
               <div>
                 <label for="attrib-jour-select">Jour</label>
@@ -64,6 +64,10 @@
                 <label for="attrib-salle-select">Salle</label>
                 <select id="attrib-salle-select"></select>
               </div>
+              <div>
+                <label for="attrib-date-input">Entrée en vigueur</label>
+                <input type="date" id="attrib-date-input" required />
+              </div>
               <button type="submit">Enregistrer</button>
             </form>
           </div>
@@ -71,6 +75,12 @@
           <div class="card">
             <h3 style="margin-top:0;">Attributions actuelles</h3>
             <div id="attrib-list" style="margin-top: 12px;"></div>
+          </div>
+
+          <div class="card" id="attrib-planifiees-card" hidden>
+            <h3 style="margin-top:0;">Changements programmés</h3>
+            <p class="muted">Pas encore entrés en vigueur — la page publique continue d'afficher la salle actuelle jusqu'à leur date.</p>
+            <div id="attrib-planifiees-list" style="margin-top: 12px;"></div>
           </div>
         </div>
       </section>

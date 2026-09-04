@@ -42,6 +42,9 @@ async function findById(collection, id) {
 }
 
 async function insert(collection, fields) {
+  if (collection === 'attributions' && !fields.dateDebut) {
+    throw new Error('dateDebut est obligatoire pour créer une attribution');
+  }
   const data = await readData();
   const item = { id: nextId(data[collection]), ...fields };
   data[collection].push(item);

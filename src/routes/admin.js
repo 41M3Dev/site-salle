@@ -5,6 +5,7 @@ const { requireAdmin } = require('../middleware/auth');
 const { JOURS } = require('../jours');
 const { SALLES } = require('../salles');
 const { getFormations } = require('../planning');
+const { todayISO, resolveAttributionPourJour } = require('../resolveSalle');
 
 router.use(requireAdmin);
 
@@ -22,15 +23,32 @@ router.get('/salles', (req, res) => {
 router.get('/classes', async (req, res) => {
   const attributions = await store.findAll('attributions');
   const salleById = new Map(SALLES.map((s) => [s.id, s]));
+  const dateRefISO = todayISO();
 
   const enriched = getFormations().map((nom) => {
-    const defaut = attributions.find((a) => a.classeId === nom && a.jourSemaine === null);
-    const nbSurcharges = attributions.filter((a) => a.classeId === nom && a.jourSemaine !== null).length;
+    const defautActuel = resolveAttributionPourJour(attributions, nom, dateRefISO, null);
+
+    const nbSurchargesActives = JOURS.filter((jour) => {
+      const resolved = resolveAttributionPourJour(attributions, nom, dateRefISO, jour);
+      return resolved && resolved.jourSemaine === jour;
+    }).length;
+
+    const prochainChangement = attributions
+      .filter((a) => a.classeId === nom && a.dateDebut > dateRefISO)
+      .sort((a, b) => (a.dateDebut < b.dateDebut ? -1 : 1))[0] || null;
+
     return {
       id: nom,
       nom,
-      salleParDefaut: defaut ? salleById.get(defaut.salleId)?.nom || null : null,
-      nbSurcharges,
+      salleParDefaut: defautActuel ? salleById.get(defautActuel.salleId)?.nom || null : null,
+      nbSurchargesActives,
+      changementProgramme: prochainChangement
+        ? {
+            dateDebut: prochainChangement.dateDebut,
+            jourSemaine: prochainChangement.jourSemaine,
+            salle: salleById.get(prochainChangement.salleId)?.nom || null,
+          }
+        : null,
     };
   });
   res.json(enriched);
@@ -38,7 +56,9 @@ router.get('/classes', async (req, res) => {
 
 // ---------- Attributions ----------
 
-// Détail des attributions d'une classe (défaut + surcharges par jour)
+// Détail des attributions d'une classe : ce qui est actuellement en
+// vigueur (défaut + éventuelles surcharges par jour), et les changements
+// programmés pour une date future (pas encore appliqués).
 router.get('/classes/:id/attributions', async (req, res) => {
   const classeId = req.params.id;
   if (!getFormations().includes(classeId)) {
@@ -47,23 +67,49 @@ router.get('/classes/:id/attributions', async (req, res) => {
 
   const attributions = await store.findAll('attributions');
   const salleById = new Map(SALLES.map((s) => [s.id, s]));
+  const dateRefISO = todayISO();
 
-  const rows = attributions
-    .filter((a) => a.classeId === classeId)
-    .map((a) => ({ jour: a.jourSemaine, salleId: a.salleId, salle: salleById.get(a.salleId)?.nom || null }));
+  const toRow = (a) =>
+    a && {
+      id: a.id,
+      salleId: a.salleId,
+      salle: salleById.get(a.salleId)?.nom || null,
+      dateDebut: a.dateDebut,
+    };
 
-  res.json({
-    defaut: rows.find((r) => r.jour === null) || null,
-    surcharges: rows.filter((r) => r.jour !== null),
-    joursDisponibles: JOURS,
+  const defaut = toRow(resolveAttributionPourJour(attributions, classeId, dateRefISO, null));
+
+  const parJour = JOURS.map((jour) => {
+    const resolved = resolveAttributionPourJour(attributions, classeId, dateRefISO, jour);
+    return {
+      jour,
+      estSurcharge: !!resolved && resolved.jourSemaine === jour,
+      ...toRow(resolved),
+    };
   });
+
+  const planifiees = attributions
+    .filter((a) => a.classeId === classeId && a.dateDebut > dateRefISO)
+    .sort((a, b) => (a.dateDebut < b.dateDebut ? -1 : 1))
+    .map((a) => ({
+      id: a.id,
+      jourSemaine: a.jourSemaine,
+      salleId: a.salleId,
+      salle: salleById.get(a.salleId)?.nom || null,
+      dateDebut: a.dateDebut,
+    }));
+
+  res.json({ defaut, parJour, planifiees, joursDisponibles: JOURS, aujourdhui: dateRefISO });
 });
 
-// Assigne une salle à une classe : jour_semaine = null (défaut, toute la semaine)
-// ou un jour précis ('lundi'..'vendredi') pour une surcharge ponctuelle.
+// Programme une salle pour une classe à partir d'une date donnée :
+// jour_semaine = null (défaut, toute la semaine) ou un jour précis
+// ('lundi'..'vendredi') pour une surcharge. On ne supprime jamais les
+// attributions passées : une nouvelle attribution avec une date_debut plus
+// récente vient simplement remplacer la précédente à partir de cette date.
 router.put('/classes/:id/attribution', async (req, res) => {
   const classeId = req.params.id;
-  const { salle_id, jour_semaine } = req.body || {};
+  const { salle_id, jour_semaine, date_debut } = req.body || {};
 
   if (!getFormations().includes(classeId)) {
     return res.status(404).json({ error: 'Classe introuvable' });
@@ -77,20 +123,34 @@ router.put('/classes/:id/attribution', async (req, res) => {
     return res.status(400).json({ error: 'Jour invalide' });
   }
 
-  await store.removeWhere('attributions', (a) => a.classeId === classeId && a.jourSemaine === jour);
-  await store.insert('attributions', { classeId, salleId: salle.id, jourSemaine: jour });
+  const dateDebut = date_debut || todayISO();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateDebut)) {
+    return res.status(400).json({ error: "Date d'entrée en vigueur invalide" });
+  }
+
+  const attributions = await store.findAll('attributions');
+  const existante = attributions.find(
+    (a) => a.classeId === classeId && a.jourSemaine === jour && a.dateDebut === dateDebut
+  );
+
+  if (existante) {
+    await store.update('attributions', existante.id, { salleId: salle.id });
+  } else {
+    await store.insert('attributions', { classeId, salleId: salle.id, jourSemaine: jour, dateDebut });
+  }
 
   res.json({ ok: true });
 });
 
-// Supprime une attribution (retire le défaut, ou retire une surcharge de jour)
-router.delete('/classes/:id/attribution', async (req, res) => {
-  const classeId = req.params.id;
-  const jour = req.query.jour || null;
+// Supprime une attribution (en vigueur ou programmée pour le futur). Si
+// c'était l'attribution actuellement en vigueur, la classe retombe sur la
+// précédente attribution valide (défaut ou surcharge de jour), s'il y en a
+// une, sinon elle n'a plus de salle.
+router.delete('/attributions/:attribId', async (req, res) => {
+  const attribution = await store.findById('attributions', req.params.attribId);
+  if (!attribution) return res.status(404).json({ error: 'Attribution introuvable' });
 
-  const removed = await store.removeWhere('attributions', (a) => a.classeId === classeId && a.jourSemaine === jour);
-
-  if (removed === 0) return res.status(404).json({ error: 'Attribution introuvable' });
+  await store.remove('attributions', attribution.id);
   res.json({ ok: true });
 });
 
